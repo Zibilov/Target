@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nişancı Oyunu</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#1a1a2e; font-family:Arial,sans-serif;
+  overflow:hidden; touch-action:none;
+  user-select:none; -webkit-user-select:none;
+}
+.hidden { display:none !important; }
+.screen {
+  position:fixed; top:0; left:0;
+  width:100vw; height:100vh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; z-index:20;
+}
+#openingScreen { background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); }
+.stars-bg { position:absolute; width:100%; height:100%; overflow:hidden; z-index:-1; }
+.star { position:absolute; background:white; border-radius:50%; animation:twinkle 3s infinite; }
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:1}}
+.game-title {
+  font-size:clamp(2rem,8vw,4rem); font-weight:900; color:#fff;
+  text-shadow:0 0 30px #e94560,0 0 60px #e94560;
+  letter-spacing:3px; text-align:center; margin-bottom:10px;
+  animation:titlePulse 2s ease-in-out infinite;
+}
+@keyframes titlePulse{
+  0%,100%{text-shadow:0 0 30px #e94560,0 0 60px #e94560}
+  50%{text-shadow:0 0 50px #e94560,0 0 100px #e94560,0 0 150px #ff6b6b}
+}
+.game-subtitle{font-size:clamp(.9rem,3vw,1.3rem);color:#a0a0c0;margin-bottom:40px;letter-spacing:2px;}
+.btn {
+  padding:14px 36px; font-size:clamp(.95rem,3vw,1.2rem); font-weight:bold;
+  border:none; border-radius:50px; cursor:pointer;
+  transition:transform .15s,box-shadow .15s;
+  letter-spacing:1px; margin:7px; min-width:190px; text-transform:uppercase;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active{transform:scale(.96)!important;}
+.btn-red  {background:linear-gradient(45deg,#e94560,#ff6b6b);color:#fff;box-shadow:0 5px 20px rgba(233,69,96,.5);}
+.btn-red:hover{transform:scale(1.04);}
+.btn-blue {background:linear-gradient(45deg,#16213e,#0f3460);color:#a0c4ff;border:2px solid #0f3460;}
+.btn-blue:hover{transform:scale(1.04);}
+.btn-green{background:linear-gradient(45deg,#11998e,#38ef7d);color:#fff;box-shadow:0 5px 20px rgba(56,239,125,.4);}
+.btn-green:hover{transform:scale(1.04);}
+.overlay{background:rgba(0,0,0,.87);backdrop-filter:blur(10px);padding:20px;}
+.overlay h2{font-size:clamp(1.4rem,5vw,2.8rem);color:#ffd700;text-align:center;margin-bottom:12px;}
+.overlay p{color:#a0c0ff;font-size:clamp(.85rem,2.3vw,1.1rem);text-align:center;margin-bottom:6px;}
+.big-score{font-size:clamp(2rem,7vw,3.5rem);color:#38ef7d;font-weight:900;margin:8px 0;}
+.fail-title{font-size:clamp(1.5rem,6vw,3rem);color:#e94560;font-weight:900;margin-bottom:10px;}
+.banner{
+  font-size:clamp(.95rem,3.5vw,1.8rem);color:#fff;
+  background:rgba(0,0,0,.65);padding:7px 18px;
+  border-radius:10px;margin:8px;letter-spacing:2px;text-align:center;
+}
+.upgrade-box{
+  background:linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,165,0,.2));
+  border:2px solid #ffd700;border-radius:14px;
+  padding:13px 22px;margin:12px;text-align:center;
+  animation:uglow 1.5s ease-in-out infinite;
+}
+@keyframes uglow{0%,100%{box-shadow:0 0 12px rgba(255,215,0,.3)}50%{box-shadow:0 0 28px rgba(255,215,0,.8)}}
+.upgrade-box h3{color:#ffd700;font-size:clamp(.95rem,2.8vw,1.3rem);margin-bottom:4px;}
+.upgrade-box p{color:#ffcc44;font-size:clamp(.8rem,1.9vw,.95rem);}
+.btn-row{display:flex;flex-wrap:wrap;justify-content:center;margin-top:16px;}
+#scoreboardScreen{background:linear-gradient(135deg,#0f0c29,#302b63);}
+.sb-list{width:90%;max-width:480px;max-height:38vh;overflow-y:auto;margin-bottom:16px;}
+.sb-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 14px;margin:4px 0;
+  background:rgba(255,255,255,.05);border-radius:9px;border-left:4px solid #e94560;
+}
+.sb-row:nth-child(1){border-left-color:#ffd700;background:rgba(255,215,0,.08)}
+.sb-row:nth-child(2){border-left-color:#c0c0c0}
+.sb-row:nth-child(3){border-left-color:#cd7f32}
+.sb-rank{color:#ffd700;font-weight:bold;min-width:28px}
+.sb-name{color:#fff;flex:1;padding:0 8px}
+.sb-lvl{color:#888;font-size:.8em;margin-right:6px}
+.sb-pts{color:#38ef7d;font-weight:bold}
+.name-box{display:flex;flex-direction:column;align-items:center;gap:9px;width:90%;max-width:380px;}
+.name-box input{
+  width:100%;padding:11px 18px;font-size:1.05rem;border-radius:9px;
+  border:2px solid #e94560;background:rgba(255,255,255,.1);
+  color:#fff;outline:none;text-align:center;
+}
+.name-box input::placeholder{color:rgba(255,255,255,.4)}
+#hud{position:fixed;top:0;left:0;width:100%;z-index:15;pointer-events:none;}
+#timerBar{width:100%;height:13px;background:rgba(0,0,0,.5);border-bottom:2px solid rgba(255,255,255,.1);}
+#timerFill{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b,#ffd700);transition:width .08s linear;}
+#hudInfo{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 14px;background:rgba(0,0,0,.62);backdrop-filter:blur(5px);gap:6px;
+}
+.hi{color:#fff;font-size:clamp(.6rem,2.1vw,.9rem);font-weight:bold;white-space:nowrap;}
+.hi span{color:#ffd700}
+#wBox{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:clamp(80px,18vw,160px);}
+#wTop{display:flex;align-items:center;gap:4px;}
+#wEmoji{font-size:clamp(.9rem,3.2vw,1.35rem);}
+#wName{font-size:clamp(.55rem,1.8vw,.82rem);color:#ffcc44;font-weight:bold;}
+#wBarWrap{width:100%;height:6px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden;}
+#wBar{height:100%;background:linear-gradient(90deg,#ffcc00,#ff8800);border-radius:4px;transition:width .3s ease;}
+#wBarLabel{font-size:clamp(.45rem,1.5vw,.7rem);color:#ffcc44;text-align:right;}
+#combo{
+  position:fixed;top:75px;left:50%;transform:translateX(-50%);
+  z-index:16;pointer-events:none;text-align:center;
+}
+.combo-txt{
+  font-size:clamp(1.4rem,5.5vw,2.8rem);font-weight:900;color:#ffd700;
+  text-shadow:0 0 18px rgba(255,215,0,.8);
+  animation:cpop .45s ease-out forwards;
+}
+@keyframes cpop{0%{transform:scale(.4);opacity:0}55%{transform:scale(1.25);opacity:1}100%{transform:scale(1);opacity:1}}
+
+/* Alıştırma sayacı — büyük ve net */
+#tCount{
+  position:fixed;top:58px;left:50%;transform:translateX(-50%);
+  z-index:16;background:rgba(0,0,0,.82);color:#fff;
+  padding:8px 22px;border-radius:12px;
+  font-size:clamp(1rem,3.5vw,1.4rem);font-weight:bold;
+  pointer-events:none;border:2px solid rgba(255,215,0,.5);
+  white-space:nowrap;
+}
+#tCount span{color:#ffd700;font-size:1.2em;}
+
+#lvlAnnounce{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:25;pointer-events:none;text-align:center;
+}
+.lvl-ann-txt{
+  font-size:clamp(2rem,8vw,4rem);font-weight:900;color:#fff;
+  text-shadow:0 0 30px #ffd700,0 0 60px #ffd700;
+  animation:lvlPop 2s ease forwards;
+}
+@keyframes lvlPop{
+  0%{opacity:0;transform:scale(.3)}
+  20%{opacity:1;transform:scale(1.2)}
+  40%{transform:scale(1)}
+  70%{opacity:1;transform:scale(1)}
+  100%{opacity:0;transform:scale(1)}
+}
+#gameCanvas{position:fixed;top:0;left:0;display:block;cursor:none;}
+</style>
+</head>
+<body>
+
+<!-- AÇILIŞ -->
+<div id="openingScreen" class="screen">
+  <div class="stars-bg" id="starsBg"></div>
+  <div class="game-title">🎯 NİŞANCI</div>
+  <div class="game-subtitle">HEDEF VURMA OYUNU</div>
+  <button class="btn btn-red"  onclick="UI.startTraining()">🐦 Alıştırmaya Başla</button>
+  <button class="btn btn-blue" onclick="UI.showScoreboard(true)">🏆 Skor Tablosu</button>
+</div>
+
+<!-- ALISTIRMA BİTTİ -->
+<div id="trainingEndScreen" class="screen overlay hidden">
+  <h2>✅ Alıştırma Tamamlandı!</h2>
+  <p>Tüm hedefleri vurdun!</p>
+  <div class="big-score" id="trScore">0</div><p>Puan</p>
+  <div class="btn-row">
+    <button class="btn btn-blue"  onclick="UI.startTraining()">🔄 Tekrar Alıştır</button>
+    <button class="btn btn-green" onclick="UI.startGame()">🚀 Gerçek Oyuna Başla</button>
+  </div>
+</div>
+
+<!-- BÖLÜM TAMAMLANDI -->
+<div id="levelEndScreen" class="screen overlay hidden">
+  <h2 id="leTitle"></h2>
+  <div class="banner" id="leBanner"></div>
+  <p>Vurulan: <strong id="leHits" style="color:#38ef7d"></strong></p>
+  <p>Puan: <strong id="leScore" style="color:#ffd700;font-size:1.4em"></strong></p>
+  <div id="leUpgrade" class="upgrade-box hidden">
+    <h3>⚡ SİLAH GELİŞTİRİLDİ!</h3>
+    <p id="leUpgradeTxt"></p>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-green" id="leNextBtn">▶️ Sonraki Bölüm</button>
+  </div>
+</div>
+
+<!-- BÖLÜM KAYBEDİLDİ -->
+<div id="levelFailScreen" class="screen overlay hidden">
+  <div class="fail-title">💀 BAŞARISIZ!</div>
+  <div class="banner" id="lfBanner"></div>
+  <p id="lfReason" style="color:#ff8888;margin:8px"></p>
+  <p>Puan: <strong id="lfScore" style="color:#ffd700;font-size:1.3em"></strong></p>
+  <div class="btn-row">
+    <button class="btn btn-red"  onclick="UI.retryLevel()">🔄 Tekrar Dene</button>
+    <button class="btn btn-blue" onclick="UI.showScoreboard(false)">🏆 Skor Tablosu</button>
+  </div>
+</div>
+
+<!-- SKORBOARD -->
+<div id="scoreboardScreen" class="screen hidden">
+  <h2 style="color:#ffd700;text-align:center;margin-bottom:14px">🏆 SKOR TABLOSU</h2>
+  <div class="sb-list" id="sbList"></div>
+  <div class="name-box" id="nameBox">
+    <p style="color:#a0c0ff">İsmini gir:</p>
+    <input type="text" id="nameInput" placeholder="İsmin..." maxlength="15">
+    <button class="btn btn-green" onclick="UI.saveScore()">💾 Kaydet</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-red" onclick="UI.toMenu()">🏠 Ana Menü</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="timerBar"><div id="timerFill"></div></div>
+  <div id="hudInfo">
+    <div class="hi">🎯 <span id="hLvl">1</span></div>
+    <div class="hi">⭐ <span id="hScore">0</span></div>
+    <div class="hi" id="hObj"></div>
+    <div id="wBox">
+      <div id="wTop">
+        <span id="wEmoji">🔫</span>
+        <span id="wName">Tabanca</span>
+      </div>
+      <div id="wBarWrap"><div id="wBar" style="width:0%"></div></div>
+      <div id="wBarLabel">0 / 300</div>
+    </div>
+  </div>
+</div>
+
+<!-- Alıştırma sayacı — HUD'dan bağımsız, her zaman çalışır -->
+<div id="tCount" class="hidden">🐦 Kalan: <span id="tLeft">0</span></div>
+
+<div id="combo"></div>
+<div id="lvlAnnounce"></div>
+<canvas id="gameCanvas" class="hidden"></canvas>
+
+<script>
+"use strict";
+
+// ── CANVAS ───────────────────────────────────────────────────
+const canvas = document.getElementById("gameCanvas");
+const ctx    = canvas.getContext("2d");
+let CW = 0, CH = 0;
+function resize(){
+  CW = canvas.width  = window.innerWidth;
+  CH = canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// ── RAF LOOP ─────────────────────────────────────────────────
+let RAF_ID = null, RUNNING = false;
+function loopStart(){
+  loopStop();
+  RUNNING = true;
+  function tick(){
+    if(!RUNNING) return;
+    RAF_ID = requestAnimationFrame(tick);
+    render();
+  }
+  RAF_ID = requestAnimationFrame(tick);
+}
+function loopStop(){
+  RUNNING = false;
+  if(RAF_ID !== null){ cancelAnimationFrame(RAF_ID); RAF_ID = null; }
+}
+
+// ── SİLAHLAR ─────────────────────────────────────────────────
+const WEAPONS = [
+  { name:"Tabanca", emoji:"🔫", r:26,  col:"#ffff00", req:0    },
+  { name:"Shotgun", emoji:"🎯", r:50,  col:"#ff8800", req:300  },
+  { name:"Roket",   emoji:"🚀", r:75,  col:"#ff4400", req:800  },
+  { name:"Bomba",   emoji:"💣", r:100, col:"#ff0000", req:1800 },
+  { name:"Lazer",   emoji:"⚡", r:130, col:"#00ffff", req:3500 },
+];
+const CurW = () => WEAPONS[S.weapon];
+
+function updateWeaponBar(){
+  const isMax = S.weapon >= WEAPONS.length - 1;
+  const barEl = document.getElementById("wBar");
+  const lblEl = document.getElementById("wBarLabel");
+  if(isMax){
+    barEl.style.width = "100%";
+    barEl.style.background = "linear-gradient(90deg,#00ffff,#0088ff)";
+    lblEl.textContent = "MAX ⚡";
+    return;
+  }
+  const cur = WEAPONS[S.weapon], nxt = WEAPONS[S.weapon + 1];
+  const progress = Math.max(0, S.totalScore - cur.req);
+  const needed   = nxt.req - cur.req;
+  const pct      = Math.min(100, (progress / needed) * 100);
+  barEl.style.width = pct + "%";
+  barEl.style.background = "linear-gradient(90deg,#ffcc00,#ff8800)";
+  lblEl.textContent = `${S.totalScore} / ${nxt.req}`;
+}
+
+function tryUpgradeWeapon(){
+  const prev = S.weapon;
+  for(let i = WEAPONS.length - 1; i > S.weapon; i--){
+    if(S.totalScore >= WEAPONS[i].req){ S.weapon = i; break; }
+  }
+  updateWeaponBar();
+  return S.weapon > prev ? WEAPONS[S.weapon] : null;
+}
+
+// ── BÖLÜMLER ─────────────────────────────────────────────────
+const LEVEL_TIME = 30;
+
+const LEVELS = [
+  { n:1,  name:"Kuşlar",      em:"🐦",  bg:{t:"sky",     c:["#87CEEB","#98D8C8"]}, tp:"bird",   cnt:8,  spd:2.0, sz:34, hp:1, pts:10, goal:6  },
+  { n:2,  name:"Kargalar",    em:"🐦",  bg:{t:"sky",     c:["#B0C4DE","#708090"]}, tp:"crow",   cnt:10, spd:2.8, sz:30, hp:1, pts:15, goal:9  },
+  { n:3,  name:"Cam Şişeler", em:"🍾",  bg:{t:"fair",    c:["#2d1b00","#5c3d00"]}, tp:"bottle", cnt:12, spd:1.8, sz:26, hp:1, pts:20, goal:10 },
+  { n:4,  name:"Meteorlar",   em:"☄️",  bg:{t:"space",   c:["#0a0a1a","#1a0a2e"]}, tp:"meteor", cnt:12, spd:3.5, sz:36, hp:1, pts:25, goal:10 },
+  { n:5,  name:"Yılanlar",    em:"🐍",  bg:{t:"jungle",  c:["#0d3d0d","#1a5c1a"]}, tp:"snake",  cnt:9,  spd:2.8, sz:32, hp:2, pts:35, goal:7  },
+  { n:6,  name:"Kaos Turu",   em:"💥",  bg:{t:"sunset",  c:["#ff4500","#ff8c00"]}, tp:"mixed",  cnt:16, spd:3.8, sz:28, hp:1, pts:40, goal:13 },
+  { n:7,  name:"Dev Yılan",   em:"🐲",  bg:{t:"dark",    c:["#0a0010","#1a0030"]}, tp:"boss",   cnt:1,  spd:3.2, sz:85, hp:50,pts:220,goal:0,  boss:true },
+  { n:8,  name:"Bombalar",    em:"💣",  bg:{t:"factory", c:["#1a1a00","#2a2a00"]}, tp:"bomb",   cnt:14, spd:3.2, sz:30, hp:1, pts:45, goal:12 },
+  { n:9,  name:"Lunapark",    em:"🎡",  bg:{t:"fair",    c:["#1a0033","#330066"]}, tp:"fair",   cnt:18, spd:4.5, sz:24, hp:1, pts:50, goal:15 },
+  { n:10, name:"MEGA YILAN",  em:"👹",  bg:{t:"hell",    c:["#1a0000","#3a0000"]}, tp:"boss",   cnt:1,  spd:4.8, sz:110,hp:100,pts:600,goal:0, boss:true },
+];
+
+// ── STATE ─────────────────────────────────────────────────────
+const S = {
+  mode:"menu", level:1,
+  score:0, totalScore:0,
+  combo:0, hits:0,
+  weapon:0,
+  timeLeft:LEVEL_TIME,
+  timerId:null, over:false,
+  trLeft:0, trDone:false,
+};
+
+let TARGETS = [], PARTS = [], LVL = LEVELS[0];
+let CX = 0, CY = 0, CVIS = false;
+
+// ── TARGET ────────────────────────────────────────────────────
+class Target {
+  constructor(lvl, extraSpd){
+    extraSpd = extraSpd || 0;
+    const raw = lvl.tp;
+    this.type  = raw === "mixed" ? (Math.random() > .5 ? "bird" : "bottle") : raw;
+    this.size  = Math.max(16, lvl.sz + (Math.random() * 8 - 4));
+    this.maxHp = lvl.hp;
+    this.hp    = lvl.hp;
+    this.pts   = lvl.pts;
+    this.spd   = lvl.spd + extraSpd;
+    this.alive = true;
+    this.flash = 0;
+    this.t     = 0;
+    this.af    = 0;
+    this.wt    = 0;
+    this.sw    = 0;   // bottle swing angle
+    this.sd    = 1;   // swing direction
+    this._init();
+  }
+
+  // Rastgele asimetrik hız üreteci
+  _rv(base){
+    const sign = Math.random() > .5 ? 1 : -1;
+    return sign * base * (0.55 + Math.random() * 0.9);
+  }
+
+  _init(){
+    const HUD = 55, s = this.size;
+    // Güvenli alan: HUD altı ve kenarlardan s kadar içeride
+    const minX = s, maxX = CW - s;
+    const minY = HUD + s, maxY = CH - s;
+
+    switch(this.type){
+
+      case "bird": case "crow":
+        // Her seferinde ya soldan ya sağdan başlar
+        if(Math.random() > .5){
+          this.x  = -s;
+          this.vx = this.spd * (0.8 + Math.random() * 0.6);
+        } else {
+          this.x  = CW + s;
+          this.vx = -this.spd * (0.8 + Math.random() * 0.6);
+        }
+        this.y  = minY + Math.random() * (maxY - minY) * 0.8;
+        this.vy = this._rv(this.spd * 0.45);
+        break;
+
+      case "meteor":
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = -s;
+        this.vx = this._rv(this.spd * 0.65);
+        this.vy = this.spd * (0.7 + Math.random() * 0.55);
+        break;
+
+      case "snake":
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = minY + Math.random() * (maxY - minY);
+        this.vx = this._rv(this.spd * 0.95);
+        this.vy = this._rv(this.spd * 0.75);
+        break;
+
+      case "boss":
+        this.x  = CW / 2;
+        this.y  = CH / 2;
+        this.vx = this._rv(this.spd * 1.1);
+        this.vy = this._rv(this.spd * 0.9);
+        break;
+
+      case "bottle":
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = CH * .42 + Math.random() * (CH * .32);
+        this.vx = this._rv(this.spd * 0.85);
+        this.vy = this._rv(this.spd * 0.35);
+        break;
+
+      case "fair":
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = HUD + s * 2 + Math.random() * (CH * .45);
+        this.vx = this._rv(this.spd * 0.95);
+        this.vy = this._rv(this.spd * 0.45);
+        break;
+
+      case "bomb":
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = -s;
+        this.vx = this._rv(this.spd * 0.55);
+        this.vy = this.spd * (0.6 + Math.random() * 0.75);
+        break;
+
+      default:
+        this.x  = minX + Math.random() * (maxX - minX);
+        this.y  = minY + Math.random() * (maxY - minY);
+        this.vx = this._rv(this.spd);
+        this.vy = this._rv(this.spd * 0.8);
+    }
+  }
+
+  // Ekrandan çıkınca güvenli konuma sıfırla
+  _respawn(){
+    this._init();
+  }
+
+  update(){
+    if(!this.alive) return;
+    this.t++;
+    if(this.t % 8 === 0) this.af = (this.af + 1) % 4;
+    if(this.flash > 0) this.flash--;
+
+    const HUD = 55, s = this.size;
+    const minX = s, maxX = CW - s;
+    const minY = HUD + s, maxY = CH - s;
+
+    switch(this.type){
+
+      case "bird": case "crow":
+        this.x += this.vx;
+        this.y += this.vy + Math.sin(this.t * 0.055) * 0.8;
+        // Yatay: karşı taraftan geri gel
+        if(this.x > CW + s * 2){
+          this.x  = -s;
+          this.y  = minY + Math.random() * (maxY - minY) * 0.8;
+          this.vx = Math.abs(this.vx);                 // sağa doğru
+          this.vy = this._rv(this.spd * 0.45);
+        } else if(this.x < -s * 2){
+          this.x  = CW + s;
+          this.y  = minY + Math.random() * (maxY - minY) * 0.8;
+          this.vx = -Math.abs(this.vx);                // sola doğru
+          this.vy = this._rv(this.spd * 0.45);
+        }
+        // Dikey: zıpla
+        if(this.y < minY){ this.vy =  Math.abs(this.vy) + 0.1; }
+        if(this.y > maxY){ this.vy = -Math.abs(this.vy) - 0.1; }
+        break;
+
+      case "meteor":
+        this.x += this.vx; this.y += this.vy;
+        if(this.y > CH + s){
+          // Yukarıdan yeniden gir
+          this.x  = minX + Math.random() * (maxX - minX);
+          this.y  = -s;
+          this.vx = this._rv(this.spd * 0.65);
+          this.vy = this.spd * (0.7 + Math.random() * 0.55);
+        }
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        break;
+
+      case "snake":
+        this.wt++;
+        if(this.wt > 40 + Math.random() * 40){
+          this.vx = this._rv(this.spd * 0.95);
+          this.vy = this._rv(this.spd * 0.75);
+          this.wt = 0;
+        }
+        this.x += this.vx; this.y += this.vy;
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        if(this.y < minY){ this.vy =  Math.abs(this.vy); this.y = minY; }
+        if(this.y > maxY){ this.vy = -Math.abs(this.vy); this.y = maxY; }
+        break;
+
+      case "boss":{
+        const rage = 1 + (1 - this.hp / this.maxHp) * 1.6;
+        this.x += this.vx * rage; this.y += this.vy * rage;
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        if(this.y < minY){ this.vy =  Math.abs(this.vy); this.y = minY; }
+        if(this.y > maxY){ this.vy = -Math.abs(this.vy); this.y = maxY; }
+        if(Math.random() < .013){
+          this.vx = this._rv(this.spd * 2.4);
+          this.vy = this._rv(this.spd * 2.0);
+        }
+        break;
+      }
+
+      case "bottle":
+        this.sw += .022 * this.sd;
+        if(Math.abs(this.sw) > .22) this.sd *= -1;
+        this.x += this.vx; this.y += this.vy;
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        if(this.y < HUD + s){ this.vy =  Math.abs(this.vy); this.y = HUD + s; }
+        if(this.y > maxY)   { this.vy = -Math.abs(this.vy); this.y = maxY; }
+        break;
+
+      case "fair":
+        this.x += this.vx; this.y += this.vy;
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        if(this.y < minY){ this.vy =  Math.abs(this.vy); this.y = minY; }
+        if(this.y > maxY){ this.vy = -Math.abs(this.vy); this.y = maxY; }
+        break;
+
+      case "bomb":
+        this.x += this.vx; this.y += this.vy; this.vy += .042;
+        if(this.y > CH + s){
+          this.x  = minX + Math.random() * (maxX - minX);
+          this.y  = -s;
+          this.vx = this._rv(this.spd * 0.55);
+          this.vy = this.spd * (0.6 + Math.random() * 0.75);
+        }
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        break;
+
+      default:
+        this.x += this.vx; this.y += this.vy;
+        if(this.x < minX){ this.vx =  Math.abs(this.vx); this.x = minX; }
+        if(this.x > maxX){ this.vx = -Math.abs(this.vx); this.x = maxX; }
+        if(this.y < minY){ this.vy =  Math.abs(this.vy); this.y = minY; }
+        if(this.y > maxY){ this.vy = -Math.abs(this.vy); this.y = maxY; }
+    }
+  }
+
+  draw(ctx){
+    if(!this.alive) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    if(this.flash > 0){ ctx.shadowColor = "#fff"; ctx.shadowBlur = 22; }
+    const s = this.size;
+    switch(this.type){
+      case "bird": case "crow": this._bird(ctx, s); break;
+      case "meteor":            this._meteor(ctx, s); break;
+      case "snake":             this._snake(ctx, s); break;
+      case "boss":              this._boss(ctx, s); break;
+      case "bottle":            this._bottle(ctx, s); break;
+      case "bomb":              this._bomb(ctx, s); break;
+      case "fair":              this._fair(ctx, s); break;
+      default:
+        ctx.fillStyle = "#f44";
+        ctx.beginPath(); ctx.arc(0,0,s,0,Math.PI*2); ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    // HP bar
+    if(this.maxHp > 1){
+      const bw=s*2, bh=7, bx=-s, by=s+7;
+      ctx.fillStyle = "#300"; ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle = `hsl(${(this.hp/this.maxHp)*120},100%,50%)`;
+      ctx.fillRect(bx, by, bw*(this.hp/this.maxHp), bh);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.strokeRect(bx,by,bw,bh);
+      if(this.type === "boss"){
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold ${Math.max(11, s/3.2)}px Arial`;
+        ctx.textAlign = "center"; ctx.shadowBlur = 0;
+        ctx.fillText(`❤️ ${this.hp}/${this.maxHp}`, 0, by+bh+15);
+      }
+    }
+    ctx.restore();
+  }
+
+  _bird(ctx,s){
+    const ic = this.type === "crow";
+    const wY = Math.sin(this.af * Math.PI / 2) * s * .37;
+    const dir = this.vx >= 0 ? 1 : -1;
+    ctx.save(); ctx.scale(dir, 1);
+    ctx.fillStyle = ic ? "#1a1a1a" : "#66554a";
+    ctx.beginPath(); ctx.ellipse(0,0,s*.83,s*.48,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = ic ? "#2a2a2a" : "#887766";
+    ctx.beginPath(); ctx.ellipse(-s*.53,-wY,s*.72,s*.26,-.3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse( s*.53,-wY,s*.72,s*.26, .3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = ic ? "#1a1a1a" : "#66554a";
+    ctx.beginPath(); ctx.arc(-s*.6,-s*.07,s*.31,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(-s*.66,-s*.15,s*.1,0,Math.PI*2);  ctx.fill();
+    ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(-s*.66,-s*.15,s*.055,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = ic ? "#333" : "#cc9900";
+    ctx.beginPath(); ctx.moveTo(-s*.93,-s*.07); ctx.lineTo(-s*.8,-s*.02); ctx.lineTo(-s*.93,s*.04); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  _meteor(ctx,s){
+    const g = ctx.createRadialGradient(0,0,0,0,0,s);
+    g.addColorStop(0,"#fff8e0"); g.addColorStop(.3,"#ff9900");
+    g.addColorStop(.7,"#ff4400"); g.addColorStop(1,"#aa2200");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    for(let i=0;i<7;i++){
+      const a=(i/7)*Math.PI*2, r=s*(.72+Math.sin(i*3)*.17);
+      i===0 ? ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r) : ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.shadowColor="#ff6600"; ctx.shadowBlur=13;
+    ctx.strokeStyle="#ffcc00"; ctx.lineWidth=2; ctx.stroke(); ctx.shadowBlur=0;
+  }
+  _snake(ctx,s){
+    const ratio = this.hp / this.maxHp;
+    const col = `hsl(${ratio*120},80%,45%)`;
+    for(let i=3;i>=0;i--){
+      ctx.fillStyle = i%2===0 ? col : "#228822";
+      ctx.beginPath(); ctx.arc(i*s*.46, Math.sin(this.t*.1+i)*s*.17, s*.4, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle="#e03333"; ctx.beginPath(); ctx.arc(-s*.16,0,s*.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="yellow";  ctx.beginPath(); ctx.arc(-s*.3,-s*.18,s*.12,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#000";    ctx.beginPath(); ctx.arc(-s*.3,-s*.18,s*.065,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#f00"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-s*.68,0); ctx.lineTo(-s*.92,-s*.12);
+    ctx.moveTo(-s*.68,0);  ctx.lineTo(-s*.92, s*.12); ctx.stroke();
+  }
+  _boss(ctx,s){
+    const ratio = this.hp / this.maxHp;
+    ctx.shadowColor = `rgba(255,${Math.floor(ratio*80)},0,.6)`;
+    ctx.shadowBlur  = 20 + Math.sin(this.t*.1)*8;
+    for(let i=5;i>=0;i--){
+      const gx=Math.cos(this.t*.06+i*.8)*s*.44, gy=Math.sin(this.t*.06+i*.8)*s*.28;
+      ctx.fillStyle = i%2===0 ? "#880000" : "#cc0000";
+      ctx.beginPath(); ctx.arc(gx,gy,s*.37,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="#ff4444"; ctx.lineWidth=2; ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    ctx.fillStyle=`hsl(${(1-ratio)*30},100%,${28+ratio*22}%)`;
+    ctx.beginPath(); ctx.arc(0,0,s*.58,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#ff8800"; ctx.lineWidth=3; ctx.stroke();
+    ctx.fillStyle="#ff0"; ctx.shadowColor="#ff0"; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(-s*.21,-s*.21,s*.11,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( s*.21,-s*.21,s*.11,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.fillStyle="#000";
+    ctx.beginPath(); ctx.arc(-s*.21,-s*.21,s*.055,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc( s*.21,-s*.21,s*.055,0,Math.PI*2); ctx.fill();
+    if(ratio < .5){
+      ctx.fillStyle="white";
+      ctx.beginPath(); ctx.moveTo(-s*.18,s*.42); ctx.lineTo(-s*.08,s*.62); ctx.lineTo(s*.02,s*.42); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo( s*.04,s*.42); ctx.lineTo( s*.14,s*.62); ctx.lineTo(s*.24,s*.42); ctx.closePath(); ctx.fill();
+    }
+  }
+  _bottle(ctx,s){
+    ctx.save(); ctx.rotate(this.sw);
+    const g = ctx.createLinearGradient(-s*.3,-s,s*.3,s);
+    g.addColorStop(0,"rgba(150,255,200,.92)");
+    g.addColorStop(.5,"rgba(80,200,150,.75)");
+    g.addColorStop(1,"rgba(40,150,100,.92)");
+    ctx.fillStyle=g; ctx.strokeStyle="#aaffcc"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(-s*.32,-s*.27,s*.64,s*1.02,[5,5,13,13]); ctx.fill(); ctx.stroke();
+    ctx.fillStyle="rgba(100,220,170,.8)";
+    ctx.beginPath(); ctx.roundRect(-s*.16,-s*.86,s*.32,s*.61,4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle="#886644";
+    ctx.beginPath(); ctx.roundRect(-s*.13,-s*.96,s*.26,s*.17,3); ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.25)";
+    ctx.beginPath(); ctx.ellipse(-s*.1,s*.05,s*.07,s*.3,-.3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  _bomb(ctx,s){
+    const flash = Math.sin(this.t*.28) > .5;
+    ctx.fillStyle = flash ? "#5a5a5a" : "#2a2a2a";
+    ctx.beginPath(); ctx.arc(0,s*.1,s*.8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#444"; ctx.lineWidth=2; ctx.stroke();
+    ctx.strokeStyle="#cc8800"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(0,-s*.7); ctx.bezierCurveTo(s*.27,-s*1.15,-s*.27,-s*1.32,0,-s*1.52); ctx.stroke();
+    if(flash){
+      ctx.fillStyle="#ffcc00"; ctx.shadowColor="#ffaa00"; ctx.shadowBlur=9;
+      ctx.beginPath(); ctx.arc(0,-s*1.52,s*.16,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+    }
+    ctx.strokeStyle="#ff3333"; ctx.lineWidth=2.5;
+    ctx.beginPath();
+    ctx.moveTo(-s*.27,-s*.17); ctx.lineTo(s*.27,s*.37);
+    ctx.moveTo( s*.27,-s*.17); ctx.lineTo(-s*.27,s*.37);
+    ctx.stroke();
+  }
+  _fair(ctx,s){
+    for(let r=3;r>=1;r--){
+      ctx.fillStyle = r%2===0 ? "#ff2244" : "#ffffff";
+      ctx.beginPath(); ctx.arc(0,0,s*(r/3),0,Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle="#ff2244"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(s,0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-s); ctx.lineTo(0,s); ctx.stroke();
+    ctx.fillStyle="#ffcc00"; ctx.shadowColor="#ffcc00"; ctx.shadowBlur=6;
+    ctx.beginPath(); ctx.arc(0,0,s*.16,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  }
+  hit(x,y,r){ return Math.hypot(x-this.x, y-this.y) < this.size + r; }
+}
+
+// ── PARTİKÜL ─────────────────────────────────────────────────
+class Particle{
+  constructor(x,y,col,isTxt,pts){
+    this.x=x; this.y=y; this.col=col; this.isTxt=isTxt;
+    if(isTxt){
+      this.txt="+"+pts; this.vy=-2.1; this.life=62; this.ml=62;
+    } else {
+      const a=Math.random()*Math.PI*2, sp=Math.random()*5+2;
+      this.vx=Math.cos(a)*sp; this.vy=Math.sin(a)*sp;
+      this.sz=Math.random()*7+2; this.life=Math.random()*35+18; this.ml=this.life;
+    }
+  }
+  update(){ this.y+=this.vy; if(!this.isTxt){this.x+=this.vx;this.vy+=.13;this.vx*=.97;} this.life--; }
+  draw(ctx){
+    const a=this.life/this.ml; ctx.globalAlpha=a;
+    if(this.isTxt){
+      ctx.font="bold 20px Arial"; ctx.fillStyle=this.col;
+      ctx.shadowColor=this.col; ctx.shadowBlur=6;
+      ctx.textAlign="center"; ctx.fillText(this.txt,this.x,this.y); ctx.shadowBlur=0;
+    } else {
+      ctx.fillStyle=this.col; ctx.shadowColor=this.col; ctx.shadowBlur=4;
+      ctx.beginPath(); ctx.arc(this.x,this.y,this.sz*a,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+    }
+    ctx.globalAlpha=1;
+  }
+}
+function burst(x,y,col,n){ n=n||12; for(let i=0;i<n;i++) PARTS.push(new Particle(x,y,col,false,0)); }
+function floatPts(x,y,pts){ PARTS.push(new Particle(x,y,"#ffd700",true,pts)); }
+
+// ── ARKAPLAN ─────────────────────────────────────────────────
+function drawBg(ctx,W,H,lvl){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,lvl.bg.c[0]); g.addColorStop(1,lvl.bg.c[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  const now=Date.now();
+  switch(lvl.bg.t){
+    case"sky":
+      ctx.fillStyle="rgba(255,255,255,.13)";
+      for(let i=0;i<4;i++){
+        const cx=(W*.22*i+now*.017)%(W+110)-55, cy=88+i*36;
+        ctx.beginPath(); ctx.ellipse(cx,cy,62,25,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(cx+35,cy-12,42,20,0,0,Math.PI*2); ctx.fill();
+      }
+      break;
+    case"space":
+      ctx.fillStyle="rgba(255,255,255,.55)";
+      for(let i=0;i<55;i++){ ctx.beginPath(); ctx.arc((i*139+50)%W,(i*97+30)%H,1+(i%3),0,Math.PI*2); ctx.fill(); }
+      break;
+    case"jungle":
+      ctx.fillStyle="rgba(0,70,0,.35)";
+      for(let i=0;i<6;i++){
+        const tx=W*.16*i+22;
+        ctx.fillRect(tx,H*.62,17,H*.4);
+        ctx.beginPath(); ctx.arc(tx+8,H*.57,36,0,Math.PI*2); ctx.fill();
+      }
+      break;
+    case"fair":
+      for(let i=0;i<14;i++){
+        const lx=W*(i/13);
+        ctx.fillStyle=`hsl(${i*26},100%,60%)`; ctx.beginPath(); ctx.arc(lx,66,6,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle=`hsla(${i*26},100%,60%,.17)`; ctx.beginPath(); ctx.arc(lx,66,16,0,Math.PI*2); ctx.fill();
+      }
+      break;
+    case"hell":
+      ctx.fillStyle=`rgba(255,50,0,${.04+Math.sin(now*.003)*.024})`;
+      ctx.fillRect(0,H*.72,W,H*.28);
+      for(let i=0;i<8;i++){
+        ctx.fillStyle=`rgba(255,${88+i*9},0,.37)`;
+        const fx=W*.12*i+17, fh=37+Math.sin(now*.005+i)*17;
+        ctx.beginPath(); ctx.moveTo(fx,H); ctx.lineTo(fx-12,H-fh); ctx.lineTo(fx+12,H-fh); ctx.closePath(); ctx.fill();
+      }
+      break;
+    case"factory":
+      ctx.strokeStyle="rgba(100,100,0,.11)"; ctx.lineWidth=1;
+      for(let i=0;i<W;i+=46){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,H); ctx.stroke(); }
+      for(let j=58;j<H;j+=46){ ctx.beginPath(); ctx.moveTo(0,j); ctx.lineTo(W,j); ctx.stroke(); }
+      break;
+    case"sunset":{
+      const sg=ctx.createRadialGradient(W/2,H*.37,0,W/2,H*.37,112);
+      sg.addColorStop(0,"rgba(255,255,130,.37)"); sg.addColorStop(1,"rgba(255,100,0,0)");
+      ctx.fillStyle=sg; ctx.fillRect(0,0,W,H); break;
+    }
+    case"dark":
+      ctx.fillStyle="rgba(200,100,255,.33)";
+      for(let i=0;i<40;i++){ ctx.beginPath(); ctx.arc((i*173)%W,(i*113)%H,1+(i%3)*.5,0,Math.PI*2); ctx.fill(); }
+      break;
+  }
+}
+
+// ── CROSSHAIR ────────────────────────────────────────────────
+function drawCross(ctx,x,y){
+  const w=CurW(), r=w.r*.5, p=Math.sin(Date.now()*.007)*2.5;
+  ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle=w.col; ctx.lineWidth=2; ctx.globalAlpha=.85;
+  ctx.shadowColor=w.col; ctx.shadowBlur=11;
+  ctx.beginPath(); ctx.arc(0,0,r+p,0,Math.PI*2); ctx.stroke();
+  const ll=r*.4, gap=r*.15;
+  ctx.beginPath();
+  ctx.moveTo(-ll-gap,0); ctx.lineTo(-gap,0);
+  ctx.moveTo(gap,0);     ctx.lineTo(ll+gap,0);
+  ctx.moveTo(0,-ll-gap); ctx.lineTo(0,-gap);
+  ctx.moveTo(0,gap);     ctx.lineTo(0,ll+gap);
+  ctx.stroke();
+  ctx.fillStyle=w.col; ctx.globalAlpha=1;
+  ctx.beginPath(); ctx.arc(0,0,3,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0; ctx.restore();
+}
+
+// ── RENDER ───────────────────────────────────────────────────
+function render(){
+  ctx.clearRect(0,0,CW,CH);
+  drawBg(ctx,CW,CH,LVL);
+  for(let i=0;i<TARGETS.length;i++) TARGETS[i].update();
+  for(let i=0;i<TARGETS.length;i++) TARGETS[i].draw(ctx);
+  for(let i=PARTS.length-1;i>=0;i--){
+    PARTS[i].update();
+    if(PARTS[i].life<=0) PARTS.splice(i,1);
+    else PARTS[i].draw(ctx);
+  }
+  if(CVIS) drawCross(ctx,CX,CY);
+}
+
+// ── ALŞTIRMA SAYACI GÜNCELLEMESİ ─────────────────────────────
+// Bu fonksiyon her zaman güvenle çağrılabilir
+function setTrainingCounter(n){
+  const el = document.getElementById("tLeft");
+  if(el) el.textContent = Math.max(0, n);
+}
+
+// ── HUD hedef sayacı ──────────────────────────────────────────
+function refreshHitHUD(){
+  if(S.mode !== "playing" || LVL.boss) return;
+  const hh = document.getElementById("hHits");
+  const hg = document.getElementById("hGoal");
+  if(hh) hh.textContent = S.hits;
+  if(hg) hg.textContent = LVL.goal;
+}
+
+// ── ATEŞ ─────────────────────────────────────────────────────
+function shoot(x,y){
+  if(S.over) return;
+  const hr = CurW().r * .5;
+  let anyHit = false;
+
+  for(let i=0;i<TARGETS.length;i++){
+    const t = TARGETS[i];
+    if(!t.alive) continue;
+    if(!t.hit(x,y,hr)) continue;
+    anyHit = true;
+    t.hp--; t.flash = 10;
+
+    if(t.hp <= 0){
+      t.alive = false;
+      S.hits++;
+      S.combo++;
+      const bonus = Math.floor(S.combo/3)*5;
+      const pts   = t.pts + bonus;
+      S.score      += pts;
+      S.totalScore += pts;
+
+      const COLS = {bird:"#aaaa44",crow:"#666655",meteor:"#ff6600",
+                    snake:"#44cc44",boss:"#cc0000",bottle:"#88ffcc",
+                    bomb:"#888800",fair:"#ff44ff"};
+      burst(t.x, t.y, COLS[t.type]||"#ffaa00", 14);
+      floatPts(t.x, t.y - t.size, pts);
+      if(S.combo >= 3) showCombo(S.combo);
+
+      // HUD güncellemeleri
+      document.getElementById("hScore").textContent = S.score;
+      updateWeaponBar();
+      refreshHitHUD();
+
+      // ── ALŞTIRMA MODU ──
+      if(S.mode === "training"){
+        S.trLeft--;
+        setTrainingCounter(S.trLeft);   // ← doğrudan span güncellenir
+        if(S.trLeft <= 0 && !S.trDone){
+          S.trDone = true;
+          setTimeout(()=>UI.endTraining(), 600);
+        }
+        return; // alıştırmada diğer kontrollere gerek yok
+      }
+
+      // ── BOSS ÖLDÜ MÜ ──
+      if(S.mode === "playing" && LVL.boss && !S.over){
+        const boss = TARGETS.find(b => b.type === "boss");
+        if(boss && !boss.alive){
+          S.over = true;
+          clearInterval(S.timerId);
+          setTimeout(()=>finishLevel(true), 500);
+        }
+      }
+
+    } else {
+      // Hasar verildi, hedef yaşıyor
+      burst(t.x, t.y, "#ff4444", 4);
+      floatPts(t.x, t.y-t.size, Math.floor(t.pts*.3));
+      document.getElementById("hScore").textContent = S.score;
+      updateWeaponBar();
+    }
+  }
+
+  if(!anyHit){
+    burst(x, y, "rgba(255,100,100,.45)", 3);
+    if(S.mode === "playing") S.combo = 0;
+  }
+}
+
+// ── GİRİŞ ────────────────────────────────────────────────────
+canvas.addEventListener("click",e=>{
+  const r=canvas.getBoundingClientRect();
+  shoot(e.clientX-r.left, e.clientY-r.top);
+});
+canvas.addEventListener("touchstart",e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(), t=e.changedTouches[0];
+  CX=t.clientX-r.left; CY=t.clientY-r.top; CVIS=true;
+  shoot(CX,CY);
+},{passive:false});
+canvas.addEventListener("touchmove",e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(), t=e.changedTouches[0];
+  CX=t.clientX-r.left; CY=t.clientY-r.top;
+},{passive:false});
+canvas.addEventListener("touchend",()=>{ CVIS=false; },{passive:false});
+canvas.addEventListener("mousemove",e=>{
+  const r=canvas.getBoundingClientRect();
+  CX=e.clientX-r.left; CY=e.clientY-r.top; CVIS=true;
+});
+canvas.addEventListener("mouseleave",()=>{ CVIS=false; });
+
+// ── TIMER ─────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(S.timerId);
+  S.timeLeft = LEVEL_TIME;
+  tickBar();
+  S.timerId = setInterval(()=>{
+    S.timeLeft--;
+    tickBar();
+    if(S.timeLeft <= 0){
+      clearInterval(S.timerId);
+      if(!S.over){ S.over=true; checkEnd(); }
+    }
+  },1000);
+}
+function tickBar(){
+  const pct = (S.timeLeft / LEVEL_TIME) * 100;
+  const f = document.getElementById("timerFill");
+  f.style.width = pct + "%";
+  f.style.background = pct<30 ? "linear-gradient(90deg,#e94560,#f00)" :
+                       pct<60 ? "linear-gradient(90deg,#f80,#fc0)" :
+                                "linear-gradient(90deg,#e94560,#f66,#fd0)";
+}
+
+// ── EKRAN YÖNETİMİ ───────────────────────────────────────────
+const ALL_SCREENS = ["openingScreen","trainingEndScreen","levelEndScreen","levelFailScreen","scoreboardScreen"];
+function hideAll(){
+  ALL_SCREENS.forEach(id=>document.getElementById(id).classList.add("hidden"));
+  document.getElementById("hud").classList.add("hidden");
+  document.getElementById("gameCanvas").classList.add("hidden");
+  document.getElementById("tCount").classList.add("hidden");
+  document.getElementById("lvlAnnounce").innerHTML = "";
+}
+function showCanvas(){
+  document.getElementById("gameCanvas").classList.remove("hidden");
+  document.getElementById("hud").classList.remove("hidden");
+}
+
+// ── REFILL ───────────────────────────────────────────────────
+let refillTimer = null;
+function startRefill(){
+  clearInterval(refillTimer);
+  if(LVL.boss) return;
+  refillTimer = setInterval(()=>{
+    if(S.over){ clearInterval(refillTimer); return; }
+    const alive = TARGETS.filter(t=>t.alive).length;
+    if(alive < 4){
+      const add = Math.ceil(LVL.cnt * .5);
+      for(let i=0;i<add;i++) TARGETS.push(new Target(LVL,(S.level-1)*0.2));
+    }
+  },1000);
+}
+
+// ── BİTİŞ ────────────────────────────────────────────────────
+function checkEnd(){
+  if(LVL.boss){
+    const boss = TARGETS.find(t=>t.type==="boss");
+    finishLevel(boss && !boss.alive);
+  } else {
+    finishLevel(S.hits >= LVL.goal);
+  }
+}
+function finishLevel(success){
+  loopStop(); clearInterval(S.timerId); clearInterval(refillTimer);
+  hideAll();
+  if(success) showLevelEnd(); else showLevelFail();
+}
+function showLevelEnd(){
+  const prev = S.weapon;
+  const uw   = tryUpgradeWeapon();
+  document.getElementById("leTitle").textContent  = `✅ BÖLÜM ${S.level} TAMAMLANDI!`;
+  document.getElementById("leBanner").textContent = `${LVL.em} ${LVL.name}`;
+  document.getElementById("leHits").textContent   = S.hits;
+  document.getElementById("leScore").textContent  = S.score+" puan";
+  const ub = document.getElementById("leUpgrade");
+  if(uw && S.weapon > prev){
+    ub.classList.remove("hidden");
+    document.getElementById("leUpgradeTxt").textContent = `${uw.emoji} ${uw.name} açıldı!`;
+  } else ub.classList.add("hidden");
+  const btn = document.getElementById("leNextBtn");
+  if(S.level >= LEVELS.length){
+    btn.textContent = "🏆 Oyun Bitti!";
+    btn.onclick = ()=>UI.showScoreboard(false);
+  } else {
+    btn.textContent = `▶️ Bölüm ${S.level+1}'e Geç`;
+    btn.onclick = ()=>UI.nextLevel();
+  }
+  document.getElementById("levelEndScreen").classList.remove("hidden");
+}
+function showLevelFail(){
+  const boss = LVL.boss ? TARGETS.find(t=>t.type==="boss") : null;
+  document.getElementById("lfBanner").textContent  = `${LVL.em} ${LVL.name} — Bölüm ${S.level}`;
+  document.getElementById("lfReason").textContent  = LVL.boss
+    ? `Boss öldürülemedi! (${boss?boss.hp:"?"} can kaldı)`
+    : `${LVL.goal} vuruş gerekiyordu, ${S.hits} vuruldu.`;
+  document.getElementById("lfScore").textContent   = S.score+" puan";
+  document.getElementById("levelFailScreen").classList.remove("hidden");
+}
+
+// ── COMBO ─────────────────────────────────────────────────────
+let comboTO = null;
+function showCombo(n){
+  const lbl = n>=10?"🌟 ONLU!!":n>=7?"💥 YEDİLİ!":n>=5?"⚡ BEŞLİ!":"🔥 ÜÇLÜ!";
+  document.getElementById("combo").innerHTML = `<div class="combo-txt">${lbl}</div>`;
+  if(comboTO) clearTimeout(comboTO);
+  comboTO = setTimeout(()=>{ document.getElementById("combo").innerHTML=""; },1800);
+}
+
+// ── LEVEL AÇILIŞ ─────────────────────────────────────────────
+function announceLevel(lvl, cb){
+  const el = document.getElementById("lvlAnnounce");
+  el.innerHTML = `<div class="lvl-ann-txt">${lvl.em} BÖLÜM ${lvl.n}<br><span style="font-size:.6em;color:#ffcc44">${lvl.name}</span></div>`;
+  setTimeout(()=>{ el.innerHTML=""; if(cb) cb(); }, 2000);
+}
+
+// ── UI ────────────────────────────────────────────────────────
+const UI = {
+
+  startTraining(){
+    hideAll(); resize();
+    Object.assign(S,{
+      mode:"training", score:0, hits:0, combo:0,
+      over:false, trDone:false, weapon:0
+    });
+    LVL = LEVELS[1]; // kargalar seviyesi
+    TARGETS = []; PARTS = [];
+
+    const CNT = 10;
+    S.trLeft = CNT;
+    for(let i=0;i<CNT;i++) TARGETS.push(new Target(LVL));
+
+    // Timer barı alıştırmada soluk
+    document.getElementById("timerFill").style.width = "100%";
+    document.getElementById("timerBar").style.opacity = ".22";
+
+    // Sayacı göster ve sıfırla
+    setTrainingCounter(CNT);
+    document.getElementById("tCount").classList.remove("hidden");
+
+    // HUD
+    document.getElementById("hLvl").textContent  = "🎓";
+    document.getElementById("hScore").textContent = "0";
+    document.getElementById("hObj").innerHTML     = "Alıştırma";
+    updateWeaponBar();
+
+    showCanvas();
+    loopStart();
+  },
+
+  endTraining(){
+    loopStop(); clearInterval(S.timerId); hideAll();
+    document.getElementById("trScore").textContent = S.score;
+    document.getElementById("trainingEndScreen").classList.remove("hidden");
+  },
+
+  startGame(){
+    Object.assign(S,{level:1,score:0,totalScore:0,hits:0,combo:0,weapon:0});
+    this._loadLevel(1);
+  },
+
+  nextLevel(){  this._loadLevel(S.level + 1); },
+  retryLevel(){ this._loadLevel(S.level);     },
+
+  _loadLevel(n){
+    hideAll(); resize();
+    Object.assign(S,{level:n, hits:0, combo:0, over:false, mode:"playing"});
+    LVL = LEVELS[n-1];
+    TARGETS = []; PARTS = [];
+
+    const extraSpd = (n-1) * 0.2;
+    for(let i=0;i<LVL.cnt;i++) TARGETS.push(new Target(LVL, extraSpd));
+
+    document.getElementById("timerBar").style.opacity = "1";
+    document.getElementById("hLvl").textContent  = n;
+    document.getElementById("hScore").textContent = S.score;
+
+    // Hedef göstergesi: boss veya normal
+    if(LVL.boss){
+      document.getElementById("hObj").innerHTML = `❤️ Boss: <span>${LVL.hp}</span>`;
+    } else {
+      // id'li span'lar — refreshHitHUD() bunları günceller
+      document.getElementById("hObj").innerHTML =
+        `Hedef: <span id="hHits">0</span>/<span id="hGoal">${LVL.goal}</span>`;
+    }
+    updateWeaponBar();
+    showCanvas();
+    loopStart();
+    announceLevel(LVL, ()=>{ startTimer(); startRefill(); });
+  },
+
+  showScoreboard(fromMenu){
+    loopStop(); clearInterval(S.timerId); hideAll();
+    const scores = this._loadScores();
+    this._renderScores(scores);
+    const box = document.getElementById("nameBox");
+    if(!fromMenu && S.score > 0) box.classList.remove("hidden");
+    else box.classList.add("hidden");
+    document.getElementById("scoreboardScreen").classList.remove("hidden");
+  },
+
+  saveScore(){
+    const name = document.getElementById("nameInput").value.trim() || "Anonim";
+    const arr  = this._loadScores();
+    arr.push({name, score:S.score, level:S.level, date:new Date().toLocaleDateString("tr")});
+    arr.sort((a,b)=>b.score-a.score);
+    const top = arr.slice(0,10);
+    try{ localStorage.setItem("nisanci_v6", JSON.stringify(top)); }catch{}
+    this._renderScores(top);
+    document.getElementById("nameBox").classList.add("hidden");
+  },
+
+  _loadScores(){
+    try{ return JSON.parse(localStorage.getItem("nisanci_v6")||"[]"); }catch{ return []; }
+  },
+
+  _renderScores(arr){
+    const el = document.getElementById("sbList");
+    if(!arr.length){
+      el.innerHTML='<p style="color:#666;text-align:center;padding:18px">Henüz skor yok!</p>';
+      return;
+    }
+    const M = ["🥇","🥈","🥉"];
+    el.innerHTML = arr.map((s,i)=>`
+      <div class="sb-row">
+        <span class="sb-rank">${M[i]||(i+1)+"."}</span>
+        <span class="sb-name">${s.name}</span>
+        <span class="sb-lvl">Bölüm ${s.level}</span>
+        <span class="sb-pts">${s.score} ⭐</span>
+      </div>`).join("");
+  },
+
+  toMenu(){
+    hideAll();
+    document.getElementById("openingScreen").classList.remove("hidden");
+  }
+};
+
+// ── AÇILIŞ YILDIZLARI ────────────────────────────────────────
+(function(){
+  const bg = document.getElementById("starsBg");
+  for(let i=0;i<75;i++){
+    const el = document.createElement("div"); el.className="star";
+    const sz = Math.random()*3+1;
+    el.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;
+      animation-delay:${Math.random()*3}s;animation-duration:${Math.random()*2+2}s`;
+    bg.appendChild(el);
+  }
+})();
+</script>
+</body>
+</html>
